@@ -1,21 +1,22 @@
 <!doctype html>
 <html>
   <head>
-    <title>Welcome to the chat</title>
+    <title>Welcome to 5chan</title>
   </head>
   <body>
-    <p>Chat screen for MYUSERNAME</p>
+    <p>Forum Listing for MYUSERNAME, you are level INSERTLEVELHERE</p>
     <hr>
     <table border="1">
       <col style="width:10%">
       <col style="width:90%">
-      <tr><th>Username</th><th>Message</th></tr>
+      <tr><th>Poster</th><th>Topic</th></tr>
       MESSAGESHERE
     </table>
     <hr>
     <form action="index.php" method="post">
-      <input type="text" name="message" placeholder="chat here"></input>
-      <button type="submit">Send</button>
+      <input type="text" name="message" style="font-size:12pt;height:20px;width:200px;" placeholder="topic title"></input><br>
+      <textarea type="text" name="content" style="font-size:12pt;height:20px;width:200px;" placeholder="write your post here"></textarea>
+      <button type="submit">Create New Topic</button>
     </form>
     <hr>
     <form action="index.php" method="post">

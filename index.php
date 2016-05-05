@@ -28,15 +28,33 @@
     return preg_replace($pattern, $replacement, $string);
   }
 
-  function add_message($message){
+  function add_message($message,$content){
+    if($_SESSION["role"]=="user") die("Users cannot create topics!");
     $dbhandle = new PDO("sqlite:chat.db") or die("Failed to open DB");
     if (!$dbhandle) die ($error);
-    $statement = $dbhandle->prepare("insert into messages ('username','message') values (:username,:message)");
+    if($message=="") die("topic cannot be empty!");
+    $statement = $dbhandle->prepare("insert into messages ('username','message','content') values (:username,:message,:content)");
     $statement->bindParam(":username", $_SESSION["username"]);
     $statement->bindParam(":message", $message);
+    $statement->bindParam(":content",$content);
     $statement->execute();
+    
   };
   
+  function check_rank($role){
+    if($role=="user"){
+      return 0;
+    }
+    if($role=="author"){
+      return 1;
+    }
+    if($role=="moderator"){
+      return 2;
+    }
+    if($role=="admin"){
+      return 3;
+    }
+  }
   function render_chat(){
     $dbhandle = new PDO("sqlite:chat.db") or die("Failed to open DB");
     if (!$dbhandle) die ($error);
@@ -48,10 +66,20 @@
     $message_rows = "";
     foreach($messages as $message){
       $message_rows .= str_replace("USERNAME", sanitize_html_string($message["username"]), 
-                            str_replace("MESSAGEHERE", sanitize_html_string($message["message"]), $message_template));
+                            str_replace("MESSAGEHERE", $message["message"], $message_template));
     }
+    if($_SESSION["role"]=="user"){
+      $userlevel = "user, you cannot create posts, however you can comment on others";
+    }else if($_SESSION["role"]=="admin") {
+      $userlevel = "admin, you can do anything you set your mind to";}
+      else if($_SESSION["role"]=="mod"){
+        $userlevel = "mod, you can change authors to users, user to authors, and CRUD posts";
+      }else if($_SESSION["role"]=="author"){
+        $userlevel="author, you can CRUD posts";
+      }
     echo str_replace("MESSAGESHERE", $message_rows, 
-        str_replace("MYUSERNAME",sanitize_html_string($_SESSION["username"]), $template));
+        str_replace("MYUSERNAME",sanitize_html_string($_SESSION["username"]), str_replace("INSERTLEVELHERE",$userlevel,$template)));
+        
   };
   
   function render_login($message = ""){
@@ -70,6 +98,7 @@
     if (isset($results["username"])){
       $_SESSION["username"] = $results["username"];
       $_SESSION["logged_in"] = "1";
+      $_SESSION["role"] = $results["role"];
       render_chat();
     } else {
       render_login("Failed authentication");
@@ -83,35 +112,41 @@
   };
   
   function register($username, $pwd){
+    $role = "user"; #standard role
     $dbhandle = new PDO("sqlite:chat.db") or die("Failed to open DB");
     if (!$dbhandle) die ($error);
-    $statement = $dbhandle->prepare("insert into users values (:username,:password)");
+    $statement = $dbhandle->prepare("insert into users values (:username,:password,:role)");
     $statement->bindParam(":username", $username);
     $statement->bindParam(":password", $pwd);
+    $statement->bindParam(":role", $role);
     $statement->execute();
     $_SESSION["username"] = $username;
     $_SESSION["logged_in"] = "1";
   };
-  if (isset($_SESSION["logged_in"])){
-    if ($_SESSION["logged_in"] == "1"){
-      if (isset($_REQUEST["logout"])){
-          logout();
-          render_login();
-      } else if (isset($_REQUEST["message"])){
-          add_message($_REQUEST["message"]);
-          render_chat();
+      
+      
+      if (isset($_SESSION["logged_in"])){
+        if ($_SESSION["logged_in"] == "1"){
+          //echo $_SESSION["role"];
+          if (isset($_REQUEST["logout"])){
+              logout();
+              render_login();
+          } else if (isset($_REQUEST["message"])){
+              add_message($_REQUEST["message"],$_REQUEST["content"]);
+              render_chat();
+          } else {
+            render_chat();
+          }
+        }
       } else {
-        render_chat();
+        if (isset($_REQUEST["login"])){
+            login($_REQUEST["username"], $_REQUEST["password"]);
+        } else if (isset($_REQUEST["register"])) {
+            register($_REQUEST["username"], $_REQUEST["password"]);
+            render_chat();
+        } else {
+            render_login();
+        }
       }
-    }
-  } else {
-    if (isset($_REQUEST["login"])){
-        login($_REQUEST["username"], $_REQUEST["password"]);
-    } else if (isset($_REQUEST["register"])) {
-        register($_REQUEST["username"], $_REQUEST["password"]);
-        render_chat();
-    } else {
-        render_login();
-    }
-  }
+  
 ?>
